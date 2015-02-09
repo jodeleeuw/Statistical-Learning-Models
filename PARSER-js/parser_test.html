@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+  <head>
+    <script src="parser.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <style>
+      div { margin: 20px; }
+      button { height: 50px; width: 50px; }
+      #lexicon, #input { border: 1px solid black; }
+    </style>
+  </head>
+  <body>
+    <button id="step">Next Step</button>
+    <button id="runall">Run all</button>
+    <div id="lexicon"></div>
+    <div id="input"></div>
+    <div id="percept-length"></div>
+  </body>
+  <script>
+  var triples = ['ABC','DEF','GHI','JKL'];
+  var seq = '';
+  for(var i = 0; i < 300; i++){
+    var toadd = shuffle(triples);
+    for(var j in toadd){
+      seq += toadd[j];
+    }
+  }
+
+  PARSER.setup(seq);
+  //PARSER.run();
+  //console.log(JSON.stringify(PARSER.getLexicon()));
+
+  $('#runall').click(function(){
+    PARSER.run();
+    $('#lexicon').text(JSON.stringify(PARSER.getLexicon()));
+  })
+
+  $('#step').click(function(){
+    $('#input').text(PARSER.getInput());
+    PARSER.step();
+    $('#lexicon').text(JSON.stringify(PARSER.getLexicon()));
+    $('#percept-length').text(PARSER.getLastPerceptLength());
+  })
+
+  function shuffle(array) {
+    var counter = array.length, temp, index;
+
+    // While there are elements in the array
+    while (counter > 0) {
+        // Pick a random index
+        index = Math.floor(Math.random() * counter);
+
+        // Decrease counter by 1
+        counter--;
+
+        // And swap the last element with it
+        temp = array[counter];
+        array[counter] = array[index];
+        array[index] = temp;
+    }
+
+    return array;
+  }
+  </script>
+</html>
