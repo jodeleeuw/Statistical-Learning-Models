@@ -87,10 +87,37 @@ MDLChunker = (function(){
       word: item,
       codeLength: undefined,
       chunkID: "C"+(lexicon.length+1),
-      canonical: (item.length == 1)
+      canonical: (item.length == 1),
+      priority: undefined
     });
   }
 
+  function get_canonical_definition(chunk){
+
+    var canonical_definition = [];
+
+    var word = chunk.word;
+    if(chunk.canonical){
+      return word;
+    } else {
+      for(var i in word){
+        var thischunk = get_chunk_by_id(word[i]);
+        canonical_definition = canonical_definition.concat(get_canonical_definition(thischunk));
+      }
+      return canonical_definition;
+    }
+
+  }
+
+  function get_chunk_by_id(chunkID){
+    for(var i in lexicon){
+      if(lexicon[i].chunkID == chunkID){
+        return lexicon[i];
+      }
+    }
+  }
+
+  /*
   function create_lower_bound_table(){
     var lower_bound_per_length = [];
     for(l in lexicon){
@@ -135,6 +162,17 @@ MDLChunker = (function(){
 
     return sum;
   }
+  */
+
+  function update_chunk_priority(){
+
+    lexicon.sort(function(a,b){ return a.codeLength - b.codeLength; });
+
+    for(var i in lexicon){
+      lexicon[i].priority = i;
+    }
+
+  }
 
   function update_codelengths(){
 
@@ -167,7 +205,7 @@ MDLChunker = (function(){
     return count;
   }
 
-  function get_codelength(vector){
+  function get_total_codelength(vector){
     var sum = 0;
     for(i in vector){
       for(l in lexicon){
@@ -180,28 +218,34 @@ MDLChunker = (function(){
     return sum;
   }
 
-  function factorize(vector, chunks){
+  function factorize(vector){
 
-    // start by coding the vector with just the base chunks
+    // update chunk priority
+    // this sorts the lexicon so that the first item is the shortest codelength
+    update_chunk_priority();
 
-    // for each possible chunk, recompute the vector using that chunk + the base chunks
-    var non_canonical_chunks = [];
-    for(i in chunks){
-      if(!chunks[i].canonical){
-        non_canonical_chunks.push(chunks[i]);
-      }
+    // apply the chunks to the vector in order, with smallest codelengths first
+    for(i in lexicon){
+      vector = replace_chunk_occurrences(lexicon[i], vector);
     }
 
-    // goal state is that there are no more chunks that could apply to the vector...
+  }
 
-    var openset = [{v: vector.slice(0), cost: get_codelength(vector), }];
+  function replace_chunk_occurrences(chunk, vector){
+    var new_vector = [];
+    var word = get_canonical_definition(chunk);
 
+    for(var v = 0; v<vector.length; v++){
+      if(JSON.stringify(vector.slice(v,v+word.length)) == JSON.stringify(word)){
+        new_vector.push(chunk.chunkID);
+        v += chunk.word.length-1;
+      } else {
+        new_vector.push(vector[v]);
+      }
+    }
+    return new_vector;
+  }
 
-    // the distance is the cost of the chunks so far + lower bound estimate on the cost of the rest of the chunks
-
-    // whichever encoding has the lowest cost becomes the new vector
-
-    // the process stops when only the base chunks can be used, or no chunk other than base chunks fit.
 
   }
 
