@@ -14,6 +14,8 @@
     <button id="runall">Run all</button>
     <div id="lexicon"></div>
     <div id="input"></div>
+    <div id="memory"></div>
+    <div id="factorizedMem"></div>
     <div id="percept-length"></div>
   </body>
   <script>
@@ -26,22 +28,24 @@
     }
   }
 
-  MDLChunker.setup('ABCDEFGH');
+  MDLChunker.setup(seq);
   //PARSER.run();
   //console.log(JSON.stringify(PARSER.getLexicon()));
-/*
+
   $('#runall').click(function(){
-    PARSER.run();
+    MDLChunker.run();
     $('#lexicon').text(JSON.stringify(PARSER.getLexicon()));
   })
 
   $('#step').click(function(){
-    $('#input').text(PARSER.getInput());
-    PARSER.step();
-    $('#lexicon').text(JSON.stringify(PARSER.getLexicon()));
-    $('#percept-length').text(PARSER.getLastPerceptLength());
+    $('#input').text(MDLChunker.getInput());
+    $('#memory').text(MDLChunker.getMemory());
+    $('#factorizedMem').text(MDLChunker.getFactorizedMemory());
+    MDLChunker.step();
+    $('#lexicon').text(JSON.stringify(MDLChunker.getLexicon()));
+    //$('#percept-length').text(MDLChunker.getLastPerceptLength());
   })
-*/
+
   function shuffle(array) {
     var counter = array.length, temp, index;
 

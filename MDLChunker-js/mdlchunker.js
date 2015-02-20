@@ -45,7 +45,7 @@ MDLChunker = (function(){
     var input_vector_index = 0;
     var last = [];
     while(!done){
-      percept.unshift(input_vector[input_vector_index]);
+      percept.push(input_vector[input_vector_index]);
       var factorized = factorize(percept);
       if(get_total_codelength(factorized) > parameters.perceptual_span) {
         done = true;
@@ -58,16 +58,21 @@ MDLChunker = (function(){
 
     // take only the first chunk out of vector and add to memory
     var first_chunk_items = get_canonical_definition(get_chunk_by_id(percept[0]));
+    for(i in first_chunk_items){
+      input_vector.shift();
+    }
 
     add_to_memory(first_chunk_items);
 
     // optimize the chunk encoding
     var new_chunk = new_chunk_search();
     while(new_chunk != false){
-      add_item_to_lexicon([new_chunk.c1, new_chunk.c2]);
+      add_item_to_lexicon([new_chunk.c1.chunkID, new_chunk.c2.chunkID]);
       update_codelengths();
       new_chunk = new_chunk_search();
     }
+
+    update_codelengths();
   }
 
   module.run = function(){
@@ -75,8 +80,20 @@ MDLChunker = (function(){
   }
 
   module.getLexicon = function() {
-    var sortedLexicon = lexicon.sort(function(a,b){ return b.weight - a.weight; });
-    return JSON.parse(JSON.stringify(sortedLexicon));
+    //var sortedLexicon = lexicon.sort(function(a,b){ return a.codeLength - b.codeLength; });
+    return JSON.parse(JSON.stringify(lexicon));
+  }
+
+  module.getInput = function() {
+    return JSON.stringify(input_vector);
+  }
+
+  module.getMemory = function() {
+    return JSON.stringify(memory);
+  }
+
+  module.getFactorizedMemory = function() {
+    return JSON.stringify(factorize(memory));
   }
 
   function parse_input_items(input, split_char){
@@ -201,7 +218,7 @@ MDLChunker = (function(){
 
     for(l in lexicon){
       var count = count_occurences(lexicon[l].chunkID, whole_vector);
-      var bitlength = -count * Math.log2(count/total_length);
+      var bitlength = -Math.log2(count/total_length);
       lexicon[l].codeLength = bitlength;
     }
   }
@@ -268,27 +285,34 @@ MDLChunker = (function(){
     var word = get_canonical_definition(chunk);
 
     for(var v = 0; v<vector.length; v++){
+      // check for canonical definition match
       if(JSON.stringify(vector.slice(v,v+word.length)) == JSON.stringify(word)){
         new_vector.push(chunk.chunkID);
+        v += word.length-1;
+      }
+      // check for chunk definition match
+      else if(JSON.stringify(vector.slice(v, v+chunk.word.length)) == JSON.stringify(chunk.word)){
+        new_vector.push(chunk.chunkID);
         v += chunk.word.length-1;
-      } else {
+      }
+      // no match
+      else {
         new_vector.push(vector[v]);
       }
     }
     return new_vector;
   }
 
-
   function add_to_memory(items){
 
     // add all items to memory
     for(i in items){
-      memory.unshift(items[i]);
+      memory.push(items[i]);
     }
 
     // check if memory is too large
     while(get_total_codelength(factorize(memory)) > parameters.memory_size){
-      memory.pop();
+      memory.unshift();
     }
 
   }
@@ -300,7 +324,7 @@ MDLChunker = (function(){
 
     // search process on the memory vector only
     // check for each possible combination of chunks
-    var possibile_new_chunks = [];
+    var possible_new_chunks = [];
     for(var i in lexicon){
       for(var j in lexicon){
         if(i!=j){
@@ -345,7 +369,7 @@ MDLChunker = (function(){
 
     var L1 = newchunk.count * (Math.log2((N + 3 - CiCj)/(CiCj + 1)) - Math.log2(N/Ci) - Math.log2(N/Cj));
     var L2 = (Ci - CiCj) * (Math.log2((N + 3 - CiCj)/(Ci - CiCj + 1)) - Math.log2(N/Ci)) + (Cj - CiCj) * (Math.log2((N + 3 - CiCj)/(Cj - CiCj + 1)) - Math.log2(N/Cj));
-    var L3 = Math.log2( Math.Pow(N+3-CiCj,3) / ((CiCj + 1)*(Ci - CiCj + 1)*(Cj-CiCj+1)))
+    var L3 = Math.log2( Math.pow(N+3-CiCj,3) / ((CiCj + 1)*(Ci - CiCj + 1)*(Cj-CiCj+1)))
     var L4 = (N - Ci - Cj) * Math.log2( (N + 3 - CiCj)/N )
 
     return L1 + L2 + L3 + L4;
