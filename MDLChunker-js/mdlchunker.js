@@ -312,7 +312,7 @@ MDLChunker = (function(){
 
     // check if memory is too large
     while(get_total_codelength(factorize(memory)) > parameters.memory_size){
-      memory.unshift();
+      memory.shift();
     }
 
   }
