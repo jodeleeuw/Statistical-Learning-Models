@@ -40,15 +40,34 @@ MDLChunker = (function(){
   module.step = function(){
 
     // fill the perceptual vector
-
-    // process the vector in terms of chunks for factorize
+    var percept = [];
+    var done = false;
+    var input_vector_index = 0;
+    var last = [];
+    while(!done){
+      percept.unshift(input_vector[input_vector_index]);
+      var factorized = factorize(percept);
+      if(get_total_codelength(factorized) > parameters.perceptual_span) {
+        done = true;
+      } else {
+        input_vector_index++; // TODO: check if too long
+        last = factorized;
+      }
+    }
+    percept = last;
 
     // take only the first chunk out of vector and add to memory
+    var first_chunk_items = get_canonical_definition(get_chunk_by_id(percept[0]));
+
+    add_to_memory(first_chunk_items);
 
     // optimize the chunk encoding
-
-    // update the codelengths
-
+    var new_chunk = new_chunk_search();
+    while(new_chunk != false){
+      add_item_to_lexicon([new_chunk.c1, new_chunk.c2]);
+      update_codelengths();
+      new_chunk = new_chunk_search();
+    }
   }
 
   module.run = function(){
@@ -176,15 +195,7 @@ MDLChunker = (function(){
 
   function update_codelengths(){
 
-    var whole_vector = [];
-
-    for(l in lexicon){
-      whole_vector.push(lexicon[l].chunkID)
-    }
-
-    for(i in memory){
-      whole_vector.push(memory[i])
-    }
+    var whole_vector = get_whole_factorized_vector();
 
     var total_length = whole_vector.length;
 
@@ -193,6 +204,22 @@ MDLChunker = (function(){
       var bitlength = -count * Math.log2(count/total_length);
       lexicon[l].codeLength = bitlength;
     }
+  }
+
+  function get_whole_factorized_vector(){
+    var whole_vector = [];
+
+    for(l in lexicon){
+      whole_vector.push(lexicon[l].chunkID)
+    }
+
+    var factorized_memory = factorize(memory);
+
+    for(i in factorized_memory){
+      whole_vector.push(factorized_memory[i])
+    }
+
+    return whole_vector;
   }
 
   function count_occurences(item, vector){
@@ -220,6 +247,9 @@ MDLChunker = (function(){
 
   function factorize(vector){
 
+    // make a copy
+    vector = vector.slice(0);
+
     // update chunk priority
     // this sorts the lexicon so that the first item is the shortest codelength
     update_chunk_priority();
@@ -228,6 +258,8 @@ MDLChunker = (function(){
     for(i in lexicon){
       vector = replace_chunk_occurrences(lexicon[i], vector);
     }
+
+    return vector;
 
   }
 
@@ -247,6 +279,76 @@ MDLChunker = (function(){
   }
 
 
+  function add_to_memory(items){
+
+    // add all items to memory
+    for(i in items){
+      memory.unshift(items[i]);
+    }
+
+    // check if memory is too large
+    while(get_total_codelength(factorize(memory)) > parameters.memory_size){
+      memory.pop();
+    }
+
+  }
+
+  function new_chunk_search(){
+
+    var whole_vector = get_whole_factorized_vector();
+    var factorized_memory = factorize(memory);
+
+    // search process on the memory vector only
+    // check for each possible combination of chunks
+    var possibile_new_chunks = [];
+    for(var i in lexicon){
+      for(var j in lexicon){
+        if(i!=j){
+          var count = count_cooccurences(lexicon[i].chunkID, lexicon[j].chunkID, factorized_memory);
+          possible_new_chunks.push({
+            c1: lexicon[i],
+            c2: lexicon[j],
+            count: count,
+          });
+        }
+      }
+    }
+    for(var i in possible_new_chunks){
+      possible_new_chunks[i].delta = description_length_increase(possible_new_chunks[i], factorized_memory);
+    }
+    // sort, with most negative delta first
+    possible_new_chunks.sort(function(a,b){ return a.delta - b.delta; });
+
+    if(possible_new_chunks[0].delta < 0){
+      return possible_new_chunks[0];
+    } else {
+      return false;
+    }
+
+  }
+
+  function count_cooccurences(c1,c2,vector){
+    var count = 0;
+    for(var i=0; i<vector.length-1; i++){
+      if(vector[i] == c1 && vector[i+1] == c2){
+        count++;
+      }
+    }
+    return count;
+  }
+
+  function description_length_increase(newchunk, vector){
+    var N = vector.length; // number of chunks in memory
+    var CiCj = newchunk.count; // number of cooccurences of c1 and c2
+    var Ci = count_occurences(newchunk.c1.chunkID, vector);
+    var Cj = count_occurences(newchunk.c2.chunkID, vector);
+
+    var L1 = newchunk.count * (Math.log2((N + 3 - CiCj)/(CiCj + 1)) - Math.log2(N/Ci) - Math.log2(N/Cj));
+    var L2 = (Ci - CiCj) * (Math.log2((N + 3 - CiCj)/(Ci - CiCj + 1)) - Math.log2(N/Ci)) + (Cj - CiCj) * (Math.log2((N + 3 - CiCj)/(Cj - CiCj + 1)) - Math.log2(N/Cj));
+    var L3 = Math.log2( Math.Pow(N+3-CiCj,3) / ((CiCj + 1)*(Ci - CiCj + 1)*(Cj-CiCj+1)))
+    var L4 = (N - Ci - Cj) * Math.log2( (N + 3 - CiCj)/N )
+
+    return L1 + L2 + L3 + L4;
   }
 
   return module;
