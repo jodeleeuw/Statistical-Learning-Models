@@ -39,6 +39,10 @@ MDLChunker = (function(){
 
   module.step = function(){
 
+    if(input_vector.length == 0){
+      return;
+    }
+
     // fill the perceptual vector
     var percept = [];
     var done = false;
@@ -50,8 +54,13 @@ MDLChunker = (function(){
       if(get_total_codelength(factorized) > parameters.perceptual_span) {
         done = true;
       } else {
-        input_vector_index++; // TODO: check if too long
-        last = factorized;
+        if(input_vector_index == input_vector.length-1){
+          done = true;
+          last = factorized;
+        } else {
+          input_vector_index++;
+          last = factorized;
+        }
       }
     }
     percept = last;
@@ -76,7 +85,9 @@ MDLChunker = (function(){
   }
 
   module.run = function(){
-
+    while(input_vector.length > 0){
+      module.step();
+    }
   }
 
   module.getLexicon = function() {
