@@ -27,6 +27,11 @@ PARSER = (function(){
     // parse input into atomic items
     input_vector = parse_input_items(input);
 
+    // reset model
+    lexicon = [];
+    current_step = 0;
+    last_percept_length = 0;
+
     // merge parameters into default params
     for(var param in params){
       parameters[param] = params[param];

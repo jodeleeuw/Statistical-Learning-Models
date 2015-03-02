@@ -1,0 +1,144 @@
+<!doctype html>
+<html>
+  <head>
+    <script src="../PARSER-js/parser.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <style>
+      div { margin: 20px; }
+      button { height: 50px; width: 50px; }
+      #lexicon, #input { border: 1px solid black; }
+    </style>
+  </head>
+  <body>
+    <button id="step">Run one session</button>
+    <button id="runall">Run all</button>
+    <div id="result" style="width:600px; height:600px;"></div>
+  </body>
+  <script>
+
+  var reps = 25;
+
+  function createFourTripleSequence(reps) {
+    var triples = ['ABC','DEF','GHI','JKL'];
+    var seq = '';
+    for(var i = 0; i < reps; i++){
+      var toadd = shuffle(triples);
+      for(var j in toadd){
+        seq += toadd[j];
+      }
+    }
+    return seq;
+  }
+
+  function createOneTripleSequence(reps) {
+    var triples = ['ABC','DEF','GHI','JKL'];
+    var seq = '';
+
+    function newSubSeq() {
+      var t = triples.slice(0);
+      t[1] = shuffle(t[1].split('')).join('');
+      t[2] = shuffle(t[2].split('')).join('');
+      t[3] = shuffle(t[3].split('')).join('');
+      return t;
+    }
+
+    for(var i = 0; i < reps; i++){
+      var toadd = shuffle(newSubSeq());
+      for(var j in toadd){
+        seq += toadd[j];
+      }
+    }
+
+    return seq;
+  }
+
+  function runOneSession(){
+
+    var seq_four = createFourTripleSequence(reps);
+    var seq_one = createOneTripleSequence(reps);
+
+    PARSER.setup(seq_four);
+
+    PARSER.run();
+
+    var lexicon = PARSER.getLexicon();
+
+    var w_four = 0;
+
+    for(l in lexicon){
+      if(JSON.stringify(lexicon[l].word) == '["A","B","C"]') {
+        w_four = lexicon[l].weight;
+      }
+    }
+
+    PARSER.setup(seq_one);
+
+    PARSER.run();
+
+    var lexicon = PARSER.getLexicon();
+
+    var w_one = 0;
+
+    for(l in lexicon){
+      if(JSON.stringify(lexicon[l].word) == '["A","B","C"]') {
+        w_one = lexicon[l].weight;
+      }
+    }
+
+    return {four: w_four, one: w_one};
+
+  }
+
+  function runExperiment(reps_per_condition){
+
+    var result = {};
+    result.one = [];
+    result.four = [];
+
+    for(var i = 0; i<reps_per_condition; i++){
+      var r = runOneSession();
+      result.one.push(r.one);
+      result.four.push(r.four);
+    }
+
+    //result.one.sort();
+    //result.four.sort();
+
+    return result;
+
+  }
+
+  //console.log(JSON.stringify(PARSER.getLexicon()));
+
+  $('#runall').click(function(){
+    var result = runExperiment(40);
+
+    console.log(JSON.stringify(result));
+  })
+
+  $('#step').click(function(){
+    var result = runOneSession();
+    console.log(JSON.stringify(result));
+  })
+
+  function shuffle(array) {
+    var counter = array.length, temp, index;
+
+    // While there are elements in the array
+    while (counter > 0) {
+        // Pick a random index
+        index = Math.floor(Math.random() * counter);
+
+        // Decrease counter by 1
+        counter--;
+
+        // And swap the last element with it
+        temp = array[counter];
+        array[counter] = array[index];
+        array[index] = temp;
+    }
+
+    return array;
+  }
+  </script>
+</html>
