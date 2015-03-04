@@ -1,6 +1,6 @@
 /* A JavaScript implementation of the PARSER model */
 
-PARSERProportionalForgetting = (function(){
+PARSER = (function(){
 
   var module = {};
 
